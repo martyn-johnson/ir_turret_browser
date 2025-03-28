@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>IR Turret (Browser Face Tracking)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { margin: 0; background: black; overflow: hidden; }
+        #video-feed { width: 100vw; height: 100vh; object-fit: cover; position: absolute; top: 0; left: 0; z-index: 0; }
+        #canvas-overlay { position: absolute; top: 0; left: 0; z-index: 1; }
+        #control-panel { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 2; display: flex; gap: 10px; }
+        button { padding: 10px 20px; font-size: 16px; border: none; border-radius: 6px; }
+        .fire { background: red; color: white; }
+        .toggle { background: #444; color: white; }
+    </style>
+</head>
+<body>
+    <img id="video-feed" src="/video_feed" crossorigin="anonymous">
+    <canvas id="canvas-overlay" width="640" height="360"></canvas>
+
+    <div id="control-panel">
+        <button class="fire" onclick="sendCommand('FIRE')">FIRE</button>
+        <button class="toggle" onclick="toggleTracking()">Toggle Tracking</button>
+        <button class="toggle" onclick="toggleAutoFire()">Toggle Auto-Fire</button>
+        <button class="toggle" onclick="startCalibration()">Calibrate</button>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.9.0"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/blazeface"></script>
+    <script src="/static/js/face_tracker.js"></script>
+</body>
+</html>
