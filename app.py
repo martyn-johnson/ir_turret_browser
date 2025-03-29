@@ -1,23 +1,23 @@
 from flask import Flask, render_template, Response, request, jsonify
 from picamera2 import Picamera2
 from turret_serial import TurretSerial
+from io import BytesIO
 import threading
 import serial.tools.list_ports
-import time  # Add this for introducing delays
+import time
 
 app = Flask(__name__)
 
-# Start camera at high resolution (wide format for Camera Module 3 Wide)
+# Initialize camera
 try:
-    # Attempt to initialize the camera
     picam2 = Picamera2()
     picam2.configure(picam2.create_preview_configuration(
-        main={"size": (1280, 720)},  # widescreen 16:9 ratio
-        controls={"AfMode": 1}       # Auto focus mode
+        main={"size": (640, 360)},  # Lower resolution for performance
+        controls={"AfMode": 1}
     ))
     picam2.start()
 
-    # Apply improved default controls
+    # Set default camera controls
     picam2.set_controls({
         "AwbEnable": True,
         "AeEnable": True,
@@ -25,37 +25,31 @@ try:
         "Contrast": 1.3,
         "Saturation": 0.8,
         "Sharpness": 1.0,
-        "AfMode": 1  # continuous autofocus
+        "AfMode": 1
     })
     camera_available = True
+    print("[INFO] Camera initialized successfully.")
 except Exception as e:
     print(f"[ERROR] Camera initialization failed: {e}")
     camera_available = False
 
-# Initialize serial communication with Arduino
-turret = TurretSerial('/dev/ttyUSB0')  # Adjust if you're using a different port
+# Initialize serial communication
+turret = TurretSerial('/dev/ttyUSB0')  # Adjust if needed
 
-# Globals
-target_x, target_y = 320, 180  # Adjusted for lower resolution (640x360)
+# Global variables
+target_x, target_y = 320, 180
 auto_track = False
 auto_fire = False
 latest_command = None
 lock = threading.Lock()
-last_command_time = 0  # For rate limiting
-command_interval = 0.2  # Minimum time (in seconds) between commands
-dead_zone = 30  # Dead zone radius in pixels
+last_command_time = 0
+command_interval = 0.2
+dead_zone = 30
 
 def send_directional_command(offset_x, offset_y):
-    """
-    Sends directional commands (UP, DOWN, LEFT, RIGHT) based on offsets.
-    Includes a dead zone and rate-limiting mechanism.
-    """
     global last_command_time
 
-    # Get current time for rate limiting
     current_time = time.time()
-
-    # Determine direction based on offsets
     if current_time - last_command_time >= command_interval:
         with lock:
             if offset_x > 0:
@@ -70,21 +64,26 @@ def send_directional_command(offset_x, offset_y):
 
 def generate_frames():
     """
-    Streams raw video frames from the camera.
+    Efficient MJPEG streaming using Picamera2 with in-memory JPEGs.
     """
     if not camera_available:
         print("[INFO] Camera is not available. Video feed is disabled.")
         return
 
-    while True:
-        frame = picam2.capture_array()
-        # Resize to lower resolution for faster streaming
-        frame = frame[:360, :640]  # Crop to 640x360 if needed
+    stream = BytesIO()
 
-        # Encode the frame as JPEG
-        buffer = picam2.encode(frame, format="jpeg")
-        yield (b'--frame\r\n'
-               b'Content-Type: image/jpeg\r\n\r\n' + buffer + b'\r\n')
+    while True:
+        try:
+            stream.seek(0)
+            stream.truncate()
+            picam2.capture_file(stream, format='jpeg')
+            frame = stream.getvalue()
+
+            yield (b'--frame\r\n'
+                   b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+        except Exception as e:
+            print(f"[ERROR] Frame generation failed: {e}")
+            break
 
 @app.route('/')
 def index():
@@ -122,7 +121,7 @@ def update_settings():
     auto_fire = data.get('auto_fire', False)
     print(f"[SETTINGS] Track: {auto_track}, Auto Fire: {auto_fire}")
 
-    # Apply additional camera settings
+    # Apply camera settings
     try:
         settings = {
             "Brightness": float(data.get("brightness", 0.2)),

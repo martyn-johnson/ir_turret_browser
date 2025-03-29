@@ -1,5 +1,6 @@
-# 🎯 IR Turret with Browser-Based Face Tracking  
-## 🧠 Offloaded AI | 🔌 Pi Zero + Camera | ⚙️ Arduino Control  
+# 🎯 Web Browser Based Remote and Autonomous Face Tracking
+## Designed for Crunchlabs Hack Pack IR Turret (by Mark Rober) 
+### Using Raspberry Pi Zero 2 W + Camera Module 3 
 **Repo:** [`ir_turret_browser`](https://github.com/martyn-johnson/ir_turret_browser)
 
 ---
