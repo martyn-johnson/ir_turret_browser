@@ -436,76 +436,55 @@
                 return;
             }
 
-            const video = document.createElement('video');
-            video.src = videoFeed.src;
-            video.crossOrigin = "anonymous";
-            video.autoplay = true;
-            video.muted = true;
-            video.loop = true;
-
+            const videoFeed = document.getElementById('video-feed');
             const canvas = document.getElementById('face-overlay');
             const ctx = canvas.getContext('2d');
 
-            video.addEventListener('loadeddata', async () => {
-                console.log("Video feed loaded successfully.");
+            // Ensure the canvas dimensions match the video feed dimensions
+            canvas.width = videoFeed.width;
+            canvas.height = videoFeed.height;
 
-                // Set canvas dimensions to match video feed
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
+            console.log("Canvas dimensions set:", canvas.width, canvas.height);
 
-                console.log("Canvas dimensions set:", canvas.width, canvas.height);
+            while (true) {
+                try {
+                    // Use the video feed image as input for face detection
+                    const predictions = await model.estimateFaces(videoFeed, false);
 
-                while (true) {
-                    try {
-                        const predictions = await model.estimateFaces(video, false);
+                    // Clear the canvas
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-                        // Clear the canvas
-                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    if (predictions.length > 0) {
+                        console.log("Faces detected:", predictions);
 
-                        if (predictions.length > 0) {
-                            console.log("Faces detected:", predictions);
+                        predictions.forEach(prediction => {
+                            const [x1, y1] = prediction.topLeft;
+                            const [x2, y2] = prediction.bottomRight;
 
-                            predictions.forEach(prediction => {
-                                const [x1, y1] = prediction.topLeft;
-                                const [x2, y2] = prediction.bottomRight;
+                            // Draw bounding box
+                            ctx.strokeStyle = 'red';
+                            ctx.lineWidth = 2;
+                            ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
 
-                                // Draw bounding box
-                                ctx.strokeStyle = 'red';
-                                ctx.lineWidth = 2;
-                                ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+                            // Draw face center
+                            const centerX = (x1 + x2) / 2;
+                            const centerY = (y1 + y2) / 2;
+                            ctx.fillStyle = 'red';
+                            ctx.beginPath();
+                            ctx.arc(centerX, centerY, 5, 0, 2 * Math.PI);
+                            ctx.fill();
 
-                                // Draw face center
-                                const centerX = (x1 + x2) / 2;
-                                const centerY = (y1 + y2) / 2;
-                                ctx.fillStyle = 'red';
-                                ctx.beginPath();
-                                ctx.arc(centerX, centerY, 5, 0, 2 * Math.PI);
-                                ctx.fill();
-
-                                console.log(`Bounding box: (${x1}, ${y1}) to (${x2}, ${y2})`);
-                                console.log(`Face center: (${centerX}, ${centerY})`);
-                            });
-                        } else {
-                            console.log("No faces detected.");
-                        }
-                    } catch (error) {
-                        console.error("Error during face detection:", error);
+                            console.log(`Bounding box: (${x1}, ${y1}) to (${x2}, ${y2})`);
+                            console.log(`Face center: (${centerX}, ${centerY})`);
+                        });
+                    } else {
+                        console.log("No faces detected.");
                     }
-
-                    await new Promise(resolve => setTimeout(resolve, 100)); // Limit detection rate
+                } catch (error) {
+                    console.error("Error during face detection:", error);
                 }
-            });
 
-            video.addEventListener('error', () => {
-                console.error("Error loading video feed.");
-            });
-
-            // Start playing the video to trigger the 'loadeddata' event
-            try {
-                await video.play();
-                console.log("Video playback started.");
-            } catch (error) {
-                console.error("Error starting video playback:", error);
+                await new Promise(resolve => setTimeout(resolve, 100)); // Limit detection rate
             }
         }
 
