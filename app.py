@@ -12,7 +12,7 @@ app = Flask(__name__)
 try:
     picam2 = Picamera2()
     picam2.configure(picam2.create_preview_configuration(
-        main={"size": (640, 360)},  # Lower resolution for performance
+        main={"size": (1280, 720)},  # Lower resolution for performance
         controls={"AfMode": 1}
     ))
     picam2.start()
