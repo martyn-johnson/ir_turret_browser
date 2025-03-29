@@ -444,6 +444,12 @@
             const ctx = canvas.getContext('2d');
 
             video.addEventListener('loadeddata', async () => {
+                // Set canvas dimensions to match video feed
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+
+                console.log("Video dimensions:", video.videoWidth, video.videoHeight);
+
                 while (true) {
                     const predictions = await model.estimateFaces(video, false);
 
@@ -451,6 +457,8 @@
                     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
                     if (predictions.length > 0) {
+                        console.log("Faces detected:", predictions);
+
                         predictions.forEach(prediction => {
                             const [x1, y1] = prediction.topLeft;
                             const [x2, y2] = prediction.bottomRight;
@@ -467,7 +475,12 @@
                             ctx.beginPath();
                             ctx.arc(centerX, centerY, 5, 0, 2 * Math.PI);
                             ctx.fill();
+
+                            console.log(`Bounding box: (${x1}, ${y1}) to (${x2}, ${y2})`);
+                            console.log(`Face center: (${centerX}, ${centerY})`);
                         });
+                    } else {
+                        console.log("No faces detected.");
                     }
 
                     await new Promise(resolve => setTimeout(resolve, 100)); // Limit detection rate
