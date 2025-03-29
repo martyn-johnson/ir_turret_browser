@@ -22,25 +22,33 @@
             z-index: 0;
         }
 
+        #face-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 2;
+            pointer-events: none;
+        }
+
         #calibration-overlay {
             position: fixed;
             top: 0;
             left: 0;
             width: 100vw;
             height: 100vh;
-            background-color: rgba(255, 0, 0, 0.3); /* Transparent red overlay */
-            z-index: 1;
-            display: none; /* Hidden by default */
+            background-color: rgba(255, 0, 0, 0.3);
+            z-index: 3;
+            display: none;
         }
 
         #control-overlay {
             position: fixed;
             bottom: 10px;
-            width: 95vw; /* Set to 95% of the view width */
-            margin: 0 auto; /* Center horizontally */
-            left: 50%; /* Center horizontally */
-            transform: translateX(-50%); /* Adjust for centering */
-            z-index: 1;
+            width: 95vw;
+            margin: 0 auto;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 4;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -54,8 +62,8 @@
 
         .dpad-circle button {
             position: absolute;
-            width: 60px; /* Increased from 50px */
-            height: 60px; /* Increased from 50px */
+            width: 60px;
+            height: 60px;
             border-radius: 50%;
             background: rgba(255, 255, 255, 0.3);
             border: none;
@@ -64,13 +72,13 @@
         }
 
         .dpad-circle button:active {
-            background: rgba(255, 255, 255, 0.7); /* Change transparency when pressed */
+            background: rgba(255, 255, 255, 0.7);
         }
 
-        .dpad-circle .up    { top: -5px; left: 50px; } /* Adjusted for larger size */
-        .dpad-circle .down  { bottom: -5px; left: 50px; } /* Adjusted for larger size */
-        .dpad-circle .left  { left: -5px; top: 50px; } /* Adjusted for larger size */
-        .dpad-circle .right { right: -5px; top: 50px; } /* Adjusted for larger size */
+        .dpad-circle .up    { top: -5px; left: 50px; }
+        .dpad-circle .down  { bottom: -5px; left: 50px; }
+        .dpad-circle .left  { left: -5px; top: 50px; }
+        .dpad-circle .right { right: -5px; top: 50px; }
 
         .fire {
             width: 80px;
@@ -129,18 +137,27 @@
             border-radius: 6px;
         }
     </style>
+
+    <!-- TensorFlow.js + BlazeFace -->
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/blazeface"></script>
 </head>
 <body>
-    <div id="calibration-overlay" onclick="handleCalibrate(event)"></div> <!-- Red overlay for calibration mode -->
-    <img id="video-feed" src="{{ url_for('video_feed') }}" onerror="handleVideoError()" style="width: 640px; height: 360px; display: none;"> <!-- Initially hidden -->
+    <!-- Camera feed -->
+    <img id="video-feed" src="{{ url_for('video_feed') }}" onerror="handleVideoError()" style="display: none;">
+    <!-- Overlay canvas for face boxes -->
+    <canvas id="face-overlay" width="640" height="360"></canvas>
 
+    <!-- Calibration overlay -->
+    <div id="calibration-overlay" onclick="handleCalibrate(event)"></div>
+
+    <!-- Error message -->
     <div id="camera-error" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; background: rgba(0, 0, 0, 0.8); padding: 20px; border-radius: 10px; text-align: center;">
         <p>Camera feed is unavailable.</p>
         <p>You can still use the controls below.</p>
     </div>
 
+    <!-- Controls -->
     <div id="control-overlay">
         <div class="dpad-circle">
             <button class="up" onclick="sendCommand('UP')">↑</button>
@@ -148,18 +165,18 @@
             <button class="left" onclick="sendCommand('LEFT')">←</button>
             <button class="right" onclick="sendCommand('RIGHT')">→</button>
         </div>
-
         <button class="pref-button" onclick="togglePreferences()">⚙</button>
         <button class="fire" onclick="sendCommand('FIRE')">FIRE</button>
     </div>
 
+    <!-- Preferences panel -->
     <div class="preferences" id="prefPanel">
         <h3>Preferences</h3>
         <button class="close-pref" onclick="togglePreferences()">Close</button>
         <button class="close-pref" onclick="togglePreferences(); toggleCalibrationMode()">Calibrate</button>
-        
+
         <label for="serialPort">Serial Port</label>
-        <select id="serialPort"></select> <!-- Dropdown for serial ports -->
+        <select id="serialPort"></select>
 
         <label><input type="checkbox" id="trackToggle"> Track Faces</label>
         <label><input type="checkbox" id="autoFireToggle"> Auto Fire</label>
@@ -178,11 +195,58 @@
 
         <label for="gain">Gain (ISO)</label>
         <input type="range" id="gain" min="1" max="8" step="0.1" value="1.0">
-
     </div>
 
     <script>
-        let isCalibrating = false; // Flag to track calibration mode
+        async function loadModel() {
+            const model = await blazeface.load();
+            console.log("BlazeFace model loaded.");
+            startFaceDetection(model);
+        }
+
+        function startFaceDetection(model) {
+            const img = document.getElementById('video-feed');
+            const canvas = document.createElement('canvas');
+            const overlay = document.getElementById('face-overlay');
+            const ctx = canvas.getContext('2d');
+            const overlayCtx = overlay.getContext('2d');
+
+            async function detect() {
+                try {
+                    canvas.width = img.naturalWidth;
+                    canvas.height = img.naturalHeight;
+                    overlay.width = img.clientWidth;
+                    overlay.height = img.clientHeight;
+
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    const predictions = await model.estimateFaces(canvas, false);
+                    overlayCtx.clearRect(0, 0, overlay.width, overlay.height);
+
+                    predictions.forEach(pred => {
+                        const [x, y] = pred.topLeft;
+                        const [x2, y2] = pred.bottomRight;
+
+                        const scaleX = overlay.width / canvas.width;
+                        const scaleY = overlay.height / canvas.height;
+
+                        const boxX = x * scaleX;
+                        const boxY = y * scaleY;
+                        const boxW = (x2 - x) * scaleX;
+                        const boxH = (y2 - y) * scaleY;
+
+                        overlayCtx.strokeStyle = "lime";
+                        overlayCtx.lineWidth = 2;
+                        overlayCtx.strokeRect(boxX, boxY, boxW, boxH);
+                    });
+                } catch (err) {
+                    console.error("Face detection error:", err);
+                }
+
+                requestAnimationFrame(detect);
+            }
+
+            detect();
+        }
 
         function sendCommand(cmd) {
             fetch('/command/' + cmd)
@@ -212,177 +276,12 @@
             });
         }
 
-        // Add event listeners for all preference inputs
-        document.addEventListener('DOMContentLoaded', function() {
-            const inputs = document.querySelectorAll('#prefPanel input');
-            inputs.forEach(input => {
-                input.addEventListener('change', applySettings);
-                // For range inputs, also update on input event for smoother updates
-                if (input.type === 'range') {
-                    input.addEventListener('input', applySettings);
-                }
-            });
-        });
-
-        function handleCalibrate(e) {
-            if (!isCalibrating) return; // Only calibrate if in calibration mode
-
-            const videoFeed = document.getElementById('video-feed');
-            const rect = videoFeed.getBoundingClientRect(); // Use video-feed's bounding box
-
-            // Calculate the scaling factor of the video feed
-            const scaleX = videoFeed.naturalWidth / rect.width;
-            const scaleY = videoFeed.naturalHeight / rect.height;
-
-            // Adjust the click position based on the scaling factor
-            const x = Math.round((e.clientX - rect.left) * scaleX);
-            const y = Math.round((e.clientY - rect.top) * scaleY);
-
-            console.log(`New target set: (${x}, ${y})`); // Print to console
-
-            fetch('/calibrate', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ x, y })
-            }).then(() => {
-                toggleCalibrationMode(false); // Exit calibration mode
-            });
-        }
-
-        function toggleCalibrationMode(enable) {
-            isCalibrating = enable !== undefined ? enable : !isCalibrating;
-            const calibrationOverlay = document.getElementById('calibration-overlay');
-            const controlOverlay = document.getElementById('control-overlay');
-            calibrationOverlay.style.display = isCalibrating ? 'block' : 'none';
-            controlOverlay.style.display = isCalibrating ? 'none' : 'flex'; // Hide controls during calibration
-        }
-
-        let commandInterval;
-        let isLongPress = false;
-
-        function startCommand(cmd) {
-            isLongPress = true;
-            sendCommand(cmd);
-            const interval = cmd === 'FIRE' ? 500 : 100;
-            commandInterval = setInterval(() => sendCommand(cmd), interval);
-        }
-
-        function stopCommand() {
-            clearInterval(commandInterval);
-            isLongPress = false;
-        }
-
-        document.addEventListener('DOMContentLoaded', function() {
-            const dpadButtons = document.querySelectorAll('.dpad-circle button, .fire'); // Include fire button
-
-            dpadButtons.forEach(button => {
-                const command = button.className.toUpperCase();
-
-                // Mouse events
-                button.addEventListener('mousedown', () => startCommand(command));
-                button.addEventListener('mouseup', stopCommand);
-                button.addEventListener('mouseleave', stopCommand);
-
-                // Touch events for mobile
-                button.addEventListener('touchstart', (e) => {
-                    e.preventDefault(); // Prevent default touch behavior
-                    startCommand(command);
-                });
-                button.addEventListener('touchend', (e) => {
-                    e.preventDefault();
-                    if (!isLongPress) {
-                        sendCommand(command); // Handle single tap
-                    }
-                    stopCommand();
-                });
-                button.addEventListener('touchcancel', stopCommand);
-            });
-
-        });
-
-        function toggleFullscreen() {
-            const docEl = document.documentElement;
-            if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement) {
-                if (docEl.requestFullscreen) {
-                    docEl.requestFullscreen();
-                } else if (docEl.webkitRequestFullscreen) { // Safari
-                    docEl.webkitRequestFullscreen();
-                } else if (docEl.msRequestFullscreen) { // IE/Edge
-                    docEl.msRequestFullscreen();
-                }
-            } else {
-                if (document.exitFullscreen) {
-                    document.exitFullscreen();
-                } else if (document.webkitExitFullscreen) { // Safari
-                    document.webkitExitFullscreen();
-                } else if (document.msExitFullscreen) { // IE/Edge
-                    document.msExitFullscreen();
-                }
-            }
-        }
-
-        document.addEventListener('DOMContentLoaded', function() {
-            const videoFeed = document.getElementById('video-feed');
-            let lastTap = 0;
-
-            videoFeed.addEventListener('touchend', (e) => {
-                const currentTime = new Date().getTime();
-                const tapLength = currentTime - lastTap;
-
-                if (tapLength < 300 && tapLength > 0) { // Detect double-tap
-                    toggleFullscreen();
-                }
-
-                lastTap = currentTime;
-            });
-        });
-
-        function isMobileDevice() {
-            return /Mobi|Android|iPhone|iPad|iPod|Windows Phone/i.test(navigator.userAgent);
-        }
-
-        document.addEventListener('DOMContentLoaded', function() {
-            // Request fullscreen on user interaction only for mobile devices
-            if (isMobileDevice()) {
-                document.body.addEventListener('click', enableFullscreen, { once: true });
-            }
-
-            let touchStartY = 0;
-            let touchEndY = 0;
-
-            // Detect swipe down gesture
-            document.body.addEventListener('touchstart', (e) => {
-                touchStartY = e.changedTouches[0].screenY;
-            });
-
-            document.body.addEventListener('touchend', (e) => {
-                touchEndY = e.changedTouches[0].screenY;
-                if (touchEndY - touchStartY > 50) { // Swipe down threshold
-                    enableFullscreen();
-                }
-            });
-
-            const videoFeed = document.getElementById('video-feed');
-            let lastTap = 0;
-
-            videoFeed.addEventListener('touchend', (e) => {
-                const currentTime = new Date().getTime();
-                const tapLength = currentTime - lastTap;
-
-                if (tapLength < 300 && tapLength > 0) { // Detect double-tap
-                    toggleFullscreen();
-                }
-
-                lastTap = currentTime;
-            });
-        });
-
         function populateSerialPorts() {
             fetch('/serial_ports')
                 .then(res => res.json())
                 .then(data => {
                     const serialPortDropdown = document.getElementById('serialPort');
-                    serialPortDropdown.innerHTML = ''; // Clear existing options
+                    serialPortDropdown.innerHTML = '';
                     data.ports.forEach(port => {
                         const option = document.createElement('option');
                         option.value = port;
@@ -392,91 +291,25 @@
                 });
         }
 
-        document.addEventListener('DOMContentLoaded', function() {
-            populateSerialPorts(); // Populate serial ports on page load
-        });
-
         function handleVideoError() {
-            const videoFeed = document.getElementById('video-feed');
-            const cameraError = document.getElementById('camera-error');
-            videoFeed.style.display = 'none';
-            cameraError.style.display = 'block';
+            document.getElementById('video-feed').style.display = 'none';
+            document.getElementById('camera-error').style.display = 'block';
         }
 
-        document.addEventListener('DOMContentLoaded', function() {
-            const videoFeed = document.getElementById('video-feed');
-            const cameraError = document.getElementById('camera-error');
-
+        document.addEventListener('DOMContentLoaded', function () {
             fetch('/video_feed')
                 .then(response => {
                     if (response.status === 503) {
                         throw new Error("Camera not available");
                     }
-                    videoFeed.style.display = 'block';
+                    document.getElementById('video-feed').style.display = 'block';
                 })
                 .catch(() => {
-                    cameraError.style.display = 'block';
+                    document.getElementById('camera-error').style.display = 'block';
                 });
-        });
 
-        let model;
-        let videoFeed = document.getElementById('video-feed');
-        let targetX = 320, targetY = 180; // Center of the video feed
-        const deadZone = 30; // Dead zone radius in pixels
-
-        async function loadModel() {
-            model = await blazeface.load();
-            console.log("BlazeFace model loaded.");
-        }
-
-        async function detectFaces() {
-            if (!model) return;
-
-            const video = document.createElement('video');
-            video.src = videoFeed.src;
-            video.crossOrigin = "anonymous";
-            video.autoplay = true;
-            video.muted = true;
-            video.loop = true;
-
-            video.addEventListener('loadeddata', async () => {
-                while (true) {
-                    const predictions = await model.estimateFaces(video, false);
-
-                    if (predictions.length > 0) {
-                        const face = predictions[0];
-                        const faceCenterX = (face.topLeft[0] + face.bottomRight[0]) / 2;
-                        const faceCenterY = (face.topLeft[1] + face.bottomRight[1]) / 2;
-
-                        const offsetX = faceCenterX - targetX;
-                        const offsetY = faceCenterY - targetY;
-
-                        if (Math.abs(offsetX) > deadZone || Math.abs(offsetY) > deadZone) {
-                            const normalizedOffsetX = offsetX > 0 ? offsetX - deadZone : offsetX + deadZone;
-                            const normalizedOffsetY = offsetY > 0 ? offsetY - deadZone : offsetY + deadZone;
-
-                            sendTrackingCommand(normalizedOffsetX, normalizedOffsetY);
-                        }
-                    }
-
-                    await new Promise(resolve => setTimeout(resolve, 100)); // Limit detection rate
-                }
-            });
-        }
-
-        function sendTrackingCommand(offsetX, offsetY) {
-            const command = offsetX > 0 ? "RIGHT" : "LEFT";
-            fetch(`/command/${command}`);
-            if (offsetY > 0) {
-                fetch(`/command/DOWN`);
-            } else if (offsetY < 0) {
-                fetch(`/command/UP`);
-            }
-        }
-
-        document.addEventListener('DOMContentLoaded', async () => {
-            await loadModel();
-            detectFaces();
+            populateSerialPorts();
+            loadModel();
         });
     </script>
 </body>
