@@ -440,9 +440,11 @@
             const canvas = document.getElementById('face-overlay');
             const ctx = canvas.getContext('2d');
 
-            // Ensure the canvas dimensions match the video feed dimensions
-            canvas.width = videoFeed.width;
-            canvas.height = videoFeed.height;
+            // Set canvas dimensions to match the video feed resolution
+            const videoWidth = 1280;
+            const videoHeight = 720;
+            canvas.width = videoWidth;
+            canvas.height = videoHeight;
 
             console.log("Canvas dimensions set:", canvas.width, canvas.height);
 
@@ -457,24 +459,35 @@
                     if (predictions.length > 0) {
                         console.log("Faces detected:", predictions);
 
+                        // Get the scaling factors to map the video feed to the canvas
+                        const rect = videoFeed.getBoundingClientRect();
+                        const scaleX = videoWidth / rect.width;
+                        const scaleY = videoHeight / rect.height;
+
                         predictions.forEach(prediction => {
                             const [x1, y1] = prediction.topLeft;
                             const [x2, y2] = prediction.bottomRight;
 
+                            // Adjust coordinates based on scaling factors
+                            const adjustedX1 = x1 / scaleX;
+                            const adjustedY1 = y1 / scaleY;
+                            const adjustedX2 = x2 / scaleX;
+                            const adjustedY2 = y2 / scaleY;
+
                             // Draw bounding box
                             ctx.strokeStyle = 'red';
                             ctx.lineWidth = 2;
-                            ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+                            ctx.strokeRect(adjustedX1, adjustedY1, adjustedX2 - adjustedX1, adjustedY2 - adjustedY1);
 
                             // Draw face center
-                            const centerX = (x1 + x2) / 2;
-                            const centerY = (y1 + y2) / 2;
+                            const centerX = (adjustedX1 + adjustedX2) / 2;
+                            const centerY = (adjustedY1 + adjustedY2) / 2;
                             ctx.fillStyle = 'red';
                             ctx.beginPath();
                             ctx.arc(centerX, centerY, 5, 0, 2 * Math.PI);
                             ctx.fill();
 
-                            console.log(`Bounding box: (${x1}, ${y1}) to (${x2}, ${y2})`);
+                            console.log(`Bounding box: (${adjustedX1}, ${adjustedY1}) to (${adjustedX2}, ${adjustedY2})`);
                             console.log(`Face center: (${centerX}, ${centerY})`);
                         });
                     } else {
