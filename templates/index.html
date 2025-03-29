@@ -135,6 +135,7 @@
 <body>
     <div id="calibration-overlay" onclick="handleCalibrate(event)"></div> <!-- Red overlay for calibration mode -->
     <img id="video-feed" src="{{ url_for('video_feed') }}" onerror="handleVideoError()" style="width: 640px; height: 360px; display: none;"> <!-- Initially hidden -->
+    <canvas id="face-overlay" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 2; pointer-events: none;"></canvas>
 
     <div id="camera-error" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; background: rgba(0, 0, 0, 0.8); padding: 20px; border-radius: 10px; text-align: center;">
         <p>Camera feed is unavailable.</p>
@@ -439,24 +440,34 @@
             video.muted = true;
             video.loop = true;
 
+            const canvas = document.getElementById('face-overlay');
+            const ctx = canvas.getContext('2d');
+
             video.addEventListener('loadeddata', async () => {
                 while (true) {
                     const predictions = await model.estimateFaces(video, false);
 
+                    // Clear the canvas
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
                     if (predictions.length > 0) {
-                        const face = predictions[0];
-                        const faceCenterX = (face.topLeft[0] + face.bottomRight[0]) / 2;
-                        const faceCenterY = (face.topLeft[1] + face.bottomRight[1]) / 2;
+                        predictions.forEach(prediction => {
+                            const [x1, y1] = prediction.topLeft;
+                            const [x2, y2] = prediction.bottomRight;
 
-                        const offsetX = faceCenterX - targetX;
-                        const offsetY = faceCenterY - targetY;
+                            // Draw bounding box
+                            ctx.strokeStyle = 'red';
+                            ctx.lineWidth = 2;
+                            ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
 
-                        if (Math.abs(offsetX) > deadZone || Math.abs(offsetY) > deadZone) {
-                            const normalizedOffsetX = offsetX > 0 ? offsetX - deadZone : offsetX + deadZone;
-                            const normalizedOffsetY = offsetY > 0 ? offsetY - deadZone : offsetY + deadZone;
-
-                            sendTrackingCommand(normalizedOffsetX, normalizedOffsetY);
-                        }
+                            // Draw face center
+                            const centerX = (x1 + x2) / 2;
+                            const centerY = (y1 + y2) / 2;
+                            ctx.fillStyle = 'red';
+                            ctx.beginPath();
+                            ctx.arc(centerX, centerY, 5, 0, 2 * Math.PI);
+                            ctx.fill();
+                        });
                     }
 
                     await new Promise(resolve => setTimeout(resolve, 100)); // Limit detection rate
