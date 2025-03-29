@@ -134,7 +134,7 @@
 </head>
 <body>
     <div id="calibration-overlay" onclick="handleCalibrate(event)"></div> <!-- Red overlay for calibration mode -->
-    <img id="video-feed" src="{{ url_for('video_feed') }}" onerror="handleVideoError()" style="width: 640px; height: 360px; display: none;"> <!-- Initially hidden -->
+    <img id="video-feed" src="{{ url_for('video_feed') }}" onerror="handleVideoError()" style="width: 100wv; height: 100vh; display: none;"> <!-- Initially hidden -->
     <canvas id="face-overlay" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 2; pointer-events: none;"></canvas>
 
     <div id="camera-error" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; background: rgba(0, 0, 0, 0.8); padding: 20px; border-radius: 10px; text-align: center;">
@@ -457,7 +457,7 @@
                     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
                     if (predictions.length > 0) {
-                        console.log("Faces detected:", predictions);
+                        //console.log("Faces detected:", predictions);
 
                         // Get the scaling factors to map the video feed to the canvas
                         const rect = videoFeed.getBoundingClientRect();
@@ -487,11 +487,11 @@
                             ctx.arc(centerX, centerY, 5, 0, 2 * Math.PI);
                             ctx.fill();
 
-                            console.log(`Bounding box: (${adjustedX1}, ${adjustedY1}) to (${adjustedX2}, ${adjustedY2})`);
+                            //console.log(`Bounding box: (${adjustedX1}, ${adjustedY1}) to (${adjustedX2}, ${adjustedY2})`);
                             console.log(`Face center: (${centerX}, ${centerY})`);
                         });
                     } else {
-                        console.log("No faces detected.");
+                        //console.log("No faces detected.");
                     }
                 } catch (error) {
                     console.error("Error during face detection:", error);
