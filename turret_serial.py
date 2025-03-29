@@ -3,7 +3,7 @@ import threading
 import time
 
 class TurretSerial:
-    def __init__(self, port='/dev/ttyACM0', baudrate=9600):
+    def __init__(self, port='/dev/ttyUSB0', baudrate=9600):
         self.ser = None
         self.port = port
         self.baudrate = baudrate
