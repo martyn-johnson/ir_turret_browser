@@ -136,6 +136,7 @@
     <div id="calibration-overlay" onclick="handleCalibrate(event)"></div> <!-- Red overlay for calibration mode -->
     <img id="video-feed" src="{{ url_for('video_feed') }}" onerror="handleVideoError()" style="width: 1280px; height: 720px; display: none;"> <!-- Initially hidden -->
     <canvas id="face-overlay" style="position: fixed; top: 0; left: 0; width: 1280px; height: 720px; z-index: 2; pointer-events: none;"></canvas>
+    <canvas id="crosshair-overlay" style="position: fixed; top: 0; left: 0; width: 1280px; height: 720px; z-index: 3; pointer-events: none;"></canvas> <!-- Added a new canvas for crosshairs -->
 
     <div id="camera-error" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; background: rgba(0, 0, 0, 0.8); padding: 20px; border-radius: 10px; text-align: center;">
         <p>Camera feed is unavailable.</p>
@@ -236,15 +237,17 @@
             const scaleY = videoFeed.naturalHeight / rect.height;
 
             // Adjust the click position based on the scaling factor
-            const x = Math.round((e.clientX - rect.left) * scaleX);
-            const y = Math.round((e.clientY - rect.top) * scaleY);
+            targetX = Math.round((e.clientX - rect.left) * scaleX);
+            targetY = Math.round((e.clientY - rect.top) * scaleY);
 
-            console.log(`New target set: (${x}, ${y})`); // Print to console
+            console.log(`New target set: (${targetX}, ${targetY})`); // Print to console
+
+            drawCrosshairs(); // Redraw crosshairs at the new target position
 
             fetch('/calibrate', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ x, y })
+                body: JSON.stringify({ x: targetX, y: targetY })
             }).then(() => {
                 toggleCalibrationMode(false); // Exit calibration mode
             });
@@ -422,7 +425,9 @@
 
         let model;
         let videoFeed = document.getElementById('video-feed');
-        let targetX = 320, targetY = 180; // Center of the video feed
+        let targetX = 640; // Default target X (center of 1280px width)
+        let targetY = 360; // Default target Y (center of 720px height)
+        const crosshairSize = 20; // Size of the crosshairs
         const deadZone = 30; // Dead zone radius in pixels
 
         async function loadModel() {
@@ -513,10 +518,39 @@
             }
         }
 
+        function drawCrosshairs() {
+            const canvas = document.getElementById('crosshair-overlay');
+            const ctx = canvas.getContext('2d');
+
+            // Clear the canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw crosshairs at the target position
+            ctx.strokeStyle = 'lime';
+            ctx.lineWidth = 2;
+
+            // Horizontal line
+            ctx.beginPath();
+            ctx.moveTo(targetX - crosshairSize, targetY);
+            ctx.lineTo(targetX + crosshairSize, targetY);
+            ctx.stroke();
+
+            // Vertical line
+            ctx.beginPath();
+            ctx.moveTo(targetX, targetY - crosshairSize);
+            ctx.lineTo(targetX, targetY + crosshairSize);
+            ctx.stroke();
+        }
+
         document.addEventListener('DOMContentLoaded', async () => {
             await loadModel();
             console.log("Starting face detection...");
             detectFaces();
+
+            const canvas = document.getElementById('crosshair-overlay');
+            canvas.width = 1280; // Match video feed resolution
+            canvas.height = 720; // Match video feed resolution
+            drawCrosshairs(); // Draw initial crosshairs
         });
     </script>
 </body>
