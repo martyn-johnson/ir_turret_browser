@@ -104,15 +104,6 @@ def send_command(cmd):
         turret.send(cmd)
     return jsonify(success=True, command=cmd)
 
-@app.route('/calibrate', methods=['POST'])
-def calibrate():
-    global target_x, target_y
-    data = request.get_json()
-    target_x = int(data.get('x', 640))
-    target_y = int(data.get('y', 360))
-    print(f"[CALIBRATION] Target set to: ({target_x}, {target_y})")
-    return jsonify(success=True, x=target_x, y=target_y)
-
 @app.route('/settings', methods=['POST'])
 def update_settings():
     global auto_track, auto_fire

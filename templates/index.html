@@ -244,13 +244,7 @@
 
             drawCrosshairs(); // Redraw crosshairs at the new target position
 
-            fetch('/calibrate', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ x: targetX, y: targetY })
-            }).then(() => {
-                toggleCalibrationMode(false); // Exit calibration mode
-            });
+            toggleCalibrationMode(false); // Exit calibration mode
         }
 
         function toggleCalibrationMode(enable) {
