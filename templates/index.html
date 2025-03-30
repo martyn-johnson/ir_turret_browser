@@ -457,22 +457,32 @@
                     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
                     if (predictions.length > 0) {
-                        //console.log("Faces detected:", predictions);
+                        console.log("Faces detected:", predictions);
 
-                        // Get the scaling factors to map the video feed to the canvas
+                        // Get the bounding rectangle of the video feed on the screen
                         const rect = videoFeed.getBoundingClientRect();
+
+                        // Calculate scaling factors to map the video feed to the canvas
                         const scaleX = videoWidth / rect.width;
                         const scaleY = videoHeight / rect.height;
+
+                        // Calculate offsets if the video feed is letterboxed (black bars)
+                        const offsetX = (rect.width * scaleY > videoWidth) 
+                            ? (rect.width - videoWidth / scaleY) / 2 
+                            : 0;
+                        const offsetY = (rect.height * scaleX > videoHeight) 
+                            ? (rect.height - videoHeight / scaleX) / 2 
+                            : 0;
 
                         predictions.forEach(prediction => {
                             const [x1, y1] = prediction.topLeft;
                             const [x2, y2] = prediction.bottomRight;
 
-                            // Adjust coordinates based on scaling factors
-                            const adjustedX1 = x1 / scaleX;
-                            const adjustedY1 = y1 / scaleY;
-                            const adjustedX2 = x2 / scaleX;
-                            const adjustedY2 = y2 / scaleY;
+                            // Adjust coordinates based on scaling factors and offsets
+                            const adjustedX1 = (x1 - offsetX) * scaleX;
+                            const adjustedY1 = (y1 - offsetY) * scaleY;
+                            const adjustedX2 = (x2 - offsetX) * scaleX;
+                            const adjustedY2 = (y2 - offsetY) * scaleY;
 
                             // Draw bounding box
                             ctx.strokeStyle = 'red';
@@ -487,14 +497,14 @@
                             ctx.arc(centerX, centerY, 5, 0, 2 * Math.PI);
                             ctx.fill();
 
-                            //console.log(`Bounding box: (${adjustedX1}, ${adjustedY1}) to (${adjustedX2}, ${adjustedY2})`);
+                            console.log(`Bounding box: (${adjustedX1}, ${adjustedY1}) to (${adjustedX2}, ${adjustedY2})`);
                             console.log(`Face center: (${centerX}, ${centerY})`);
                         });
                     } else {
                         //console.log("No faces detected.");
                     }
                 } catch (error) {
-                    console.error("Error during face detection:", error);
+                    //console.error("Error during face detection:", error);
                 }
 
                 await new Promise(resolve => setTimeout(resolve, 100)); // Limit detection rate
