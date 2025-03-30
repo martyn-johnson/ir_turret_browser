@@ -134,8 +134,8 @@
 </head>
 <body>
     <div id="calibration-overlay" onclick="handleCalibrate(event)"></div> <!-- Red overlay for calibration mode -->
-    <img id="video-feed" src="{{ url_for('video_feed') }}" onerror="handleVideoError()" style="width: 100wv; height: 100vh; display: none;"> <!-- Initially hidden -->
-    <canvas id="face-overlay" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 2; pointer-events: none;"></canvas>
+    <img id="video-feed" src="{{ url_for('video_feed') }}" onerror="handleVideoError()" style="width: 1280px; height: 720px; display: none;"> <!-- Initially hidden -->
+    <canvas id="face-overlay" style="position: fixed; top: 0; left: 0; width: 1280px; height: 720px; z-index: 2; pointer-events: none;"></canvas>
 
     <div id="camera-error" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; background: rgba(0, 0, 0, 0.8); padding: 20px; border-radius: 10px; text-align: center;">
         <p>Camera feed is unavailable.</p>
