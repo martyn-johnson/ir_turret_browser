@@ -473,45 +473,42 @@
                         const scaleX = videoWidth / rect.width;
                         const scaleY = videoHeight / rect.height;
 
-                        // Calculate offsets if the video feed is letterboxed (black bars)
-                        const offsetX = (rect.width * scaleY > videoWidth) 
-                            ? (rect.width - videoWidth / scaleY) / 2 
-                            : 0;
-                        const offsetY = (rect.height * scaleX > videoHeight) 
-                            ? (rect.height - videoHeight / scaleX) / 2 
-                            : 0;
-
                         predictions.forEach(prediction => {
                             const [x1, y1] = prediction.topLeft;
                             const [x2, y2] = prediction.bottomRight;
 
-                            // Adjust coordinates based on scaling factors and offsets
-                            const adjustedX1 = (x1 - offsetX) * scaleX;
-                            const adjustedY1 = (y1 - offsetY) * scaleY;
-                            const adjustedX2 = (x2 - offsetX) * scaleX;
-                            const adjustedY2 = (y2 - offsetY) * scaleY;
+                            // Adjust coordinates based on scaling factors
+                            const centerX = ((x1 + x2) / 2) * scaleX;
+                            const centerY = ((y1 + y2) / 2) * scaleY;
 
                             // Draw bounding box
                             ctx.strokeStyle = 'red';
                             ctx.lineWidth = 2;
-                            ctx.strokeRect(adjustedX1, adjustedY1, adjustedX2 - adjustedX1, adjustedY2 - adjustedY1);
+                            ctx.strokeRect(x1 * scaleX, y1 * scaleY, (x2 - x1) * scaleX, (y2 - y1) * scaleY);
 
                             // Draw face center
-                            const centerX = (adjustedX1 + adjustedX2) / 2;
-                            const centerY = (adjustedY1 + adjustedY2) / 2;
                             ctx.fillStyle = 'red';
                             ctx.beginPath();
                             ctx.arc(centerX, centerY, 5, 0, 2 * Math.PI);
                             ctx.fill();
 
-                            console.log(`Bounding box: (${adjustedX1}, ${adjustedY1}) to (${adjustedX2}, ${adjustedY2})`);
-                            console.log(`Face center: (${centerX}, ${centerY})`);
+                            // If "Track Faces" is enabled, send commands to move the turret
+                            const trackToggle = document.getElementById('trackToggle').checked;
+                            if (trackToggle) {
+                                const deltaX = centerX - targetX;
+                                const deltaY = centerY - targetY;
+
+                                if (Math.abs(deltaX) > deadZone) {
+                                    sendCommand(deltaX > 0 ? 'RIGHT' : 'LEFT');
+                                }
+                                if (Math.abs(deltaY) > deadZone) {
+                                    sendCommand(deltaY > 0 ? 'DOWN' : 'UP');
+                                }
+                            }
                         });
-                    } else {
-                        //console.log("No faces detected.");
                     }
                 } catch (error) {
-                    //console.error("Error during face detection:", error);
+                    console.error("Error during face detection:", error);
                 }
 
                 await new Promise(resolve => setTimeout(resolve, 100)); // Limit detection rate
