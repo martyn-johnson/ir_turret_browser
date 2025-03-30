@@ -476,12 +476,13 @@
 
                             // Adjust coordinates based on scaling factors
                             const adjustedX1 = x1 * scaleX;
-                            const adjustedY1 = y1 * scaleY;
                             const adjustedX2 = x2 * scaleX;
-                            const adjustedY2 = y2 * scaleY;
 
-                            const centerX = (adjustedX1 + adjustedX2) / 2;
-                            const centerY = (adjustedY1 + adjustedY2) / 2;
+                            // Adjust Y-coordinates to make the bounding box taller
+                            const centerY = ((y1 + y2) / 2) * scaleY;
+                            const height = (y2 - y1) * scaleY;
+                            const adjustedY1 = centerY - height; // Extend upward
+                            const adjustedY2 = centerY + height; // Extend downward
 
                             // Draw bounding box
                             ctx.strokeStyle = 'red';
@@ -491,7 +492,7 @@
                             // Draw face center
                             ctx.fillStyle = 'red';
                             ctx.beginPath();
-                            ctx.arc(centerX, centerY, 5, 0, 2 * Math.PI);
+                            ctx.arc((adjustedX1 + adjustedX2) / 2, centerY, 5, 0, 2 * Math.PI);
                             ctx.fill();
 
                             // If "Track Faces" is enabled, send commands to move the turret
@@ -512,7 +513,7 @@
 
                                 // Add a buffer to slow down movement and rate-limit commands
                                 if (now - lastCommandTime > commandCooldown) {
-                                    const deltaX = centerX - targetX;
+                                    const deltaX = (adjustedX1 + adjustedX2) / 2 - targetX;
                                     const deltaY = centerY - targetY;
 
                                     if (Math.abs(deltaX) > deadZone) {
