@@ -455,6 +455,9 @@
 
             console.log("Canvas dimensions set:", canvas.width, canvas.height);
 
+            let lastCommandTime = 0; // Track the last time a command was sent
+            const commandCooldown = 200; // Minimum time (ms) between commands
+
             while (true) {
                 try {
                     // Use the video feed image as input for face detection
@@ -478,13 +481,18 @@
                             const [x2, y2] = prediction.bottomRight;
 
                             // Adjust coordinates based on scaling factors
-                            const centerX = ((x1 + x2) / 2) * scaleX;
-                            const centerY = ((y1 + y2) / 2) * scaleY;
+                            const adjustedX1 = x1 * scaleX;
+                            const adjustedY1 = y1 * scaleY;
+                            const adjustedX2 = x2 * scaleX;
+                            const adjustedY2 = y2 * scaleY;
+
+                            const centerX = (adjustedX1 + adjustedX2) / 2;
+                            const centerY = (adjustedY1 + adjustedY2) / 2;
 
                             // Draw bounding box
                             ctx.strokeStyle = 'red';
                             ctx.lineWidth = 2;
-                            ctx.strokeRect(x1 * scaleX, y1 * scaleY, (x2 - x1) * scaleX, (y2 - y1) * scaleY);
+                            ctx.strokeRect(adjustedX1, adjustedY1, adjustedX2 - adjustedX1, adjustedY2 - adjustedY1);
 
                             // Draw face center
                             ctx.fillStyle = 'red';
@@ -495,14 +503,32 @@
                             // If "Track Faces" is enabled, send commands to move the turret
                             const trackToggle = document.getElementById('trackToggle').checked;
                             if (trackToggle) {
-                                const deltaX = centerX - targetX;
-                                const deltaY = centerY - targetY;
+                                const now = Date.now();
 
-                                if (Math.abs(deltaX) > deadZone) {
-                                    sendCommand(deltaX > 0 ? 'RIGHT' : 'LEFT');
+                                // Check if the target is already within the bounding box
+                                if (
+                                    targetX >= adjustedX1 &&
+                                    targetX <= adjustedX2 &&
+                                    targetY >= adjustedY1 &&
+                                    targetY <= adjustedY2
+                                ) {
+                                    console.log("Target is within the bounding box. No movement required.");
+                                    return; // Stop movement
                                 }
-                                if (Math.abs(deltaY) > deadZone) {
-                                    sendCommand(deltaY > 0 ? 'DOWN' : 'UP');
+
+                                // Add a buffer to slow down movement and rate-limit commands
+                                if (now - lastCommandTime > commandCooldown) {
+                                    const deltaX = centerX - targetX;
+                                    const deltaY = centerY - targetY;
+
+                                    if (Math.abs(deltaX) > deadZone) {
+                                        sendCommand(deltaX > 0 ? 'RIGHT' : 'LEFT');
+                                    }
+                                    if (Math.abs(deltaY) > deadZone) {
+                                        sendCommand(deltaY > 0 ? 'DOWN' : 'UP');
+                                    }
+
+                                    lastCommandTime = now; // Update the last command time
                                 }
                             }
                         });
