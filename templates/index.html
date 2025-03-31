@@ -244,34 +244,84 @@
             });
         });
 
+        let scaleX = 1, scaleY = 1; // Scaling factors for video and overlays
+
+        function adjustScaling() {
+            const videoFeed = document.getElementById('video-feed');
+            const faceOverlay = document.getElementById('face-overlay');
+            const crosshairOverlay = document.getElementById('crosshair-overlay');
+
+            const screenWidth = window.innerWidth;
+            const screenHeight = window.innerHeight;
+
+            // Calculate scaling factors to fit the video feed within the screen
+            scaleX = screenWidth / 1280;
+            scaleY = screenHeight / 720;
+
+            const scale = Math.min(scaleX, scaleY); // Maintain aspect ratio
+            const scaledWidth = 1280 * scale;
+            const scaledHeight = 720 * scale;
+
+            // Apply scaling to video feed and overlays
+            videoFeed.style.width = `${scaledWidth}px`;
+            videoFeed.style.height = `${scaledHeight}px`;
+            faceOverlay.style.width = `${scaledWidth}px`;
+            faceOverlay.style.height = `${scaledHeight}px`;
+            crosshairOverlay.style.width = `${scaledWidth}px`;
+            crosshairOverlay.style.height = `${scaledHeight}px`;
+
+            // Center the video feed and overlays
+            videoFeed.style.left = `${(screenWidth - scaledWidth) / 2}px`;
+            videoFeed.style.top = `${(screenHeight - scaledHeight) / 2}px`;
+            faceOverlay.style.left = videoFeed.style.left;
+            faceOverlay.style.top = videoFeed.style.top;
+            crosshairOverlay.style.left = videoFeed.style.left;
+            crosshairOverlay.style.top = videoFeed.style.top;
+        }
+
         function handleCalibrate(e) {
-            if (!isCalibrating) return; // Only calibrate if in calibration mode
+            if (!isCalibrating) return;
 
             const videoFeed = document.getElementById('video-feed');
-            const rect = videoFeed.getBoundingClientRect(); // Use video-feed's bounding box
+            const rect = videoFeed.getBoundingClientRect();
 
-            // Calculate the scaling factor of the video feed
-            const scaleX = videoFeed.naturalWidth / rect.width;
-            const scaleY = videoFeed.naturalHeight / rect.height;
+            // Adjust click position based on scaling factors
+            targetX = Math.round((e.clientX - rect.left) / scaleX);
+            targetY = Math.round((e.clientY - rect.top) / scaleY);
 
-            // Adjust the click position based on the scaling factor
-            targetX = Math.round((e.clientX - rect.left) * scaleX);
-            targetY = Math.round((e.clientY - rect.top) * scaleY);
-
-            console.log(`New target set: (${targetX}, ${targetY})`); // Print to console
-
-            drawCrosshairs(); // Redraw crosshairs at the new target position
-
-            toggleCalibrationMode(false); // Exit calibration mode
+            console.log(`New target set: (${targetX}, ${targetY})`);
+            drawCrosshairs();
+            toggleCalibrationMode(false);
         }
 
-        function toggleCalibrationMode(enable) {
-            isCalibrating = enable !== undefined ? enable : !isCalibrating;
-            const calibrationOverlay = document.getElementById('calibration-overlay');
-            const controlOverlay = document.getElementById('control-overlay');
-            calibrationOverlay.style.display = isCalibrating ? 'block' : 'none';
-            controlOverlay.style.display = isCalibrating ? 'none' : 'flex'; // Hide controls during calibration
+        function drawCrosshairs() {
+            const canvas = document.getElementById('crosshair-overlay');
+            const ctx = canvas.getContext('2d');
+
+            // Clear the canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Scale crosshairs to match the target position
+            ctx.strokeStyle = 'lime';
+            ctx.lineWidth = 2;
+
+            // Horizontal line
+            ctx.beginPath();
+            ctx.moveTo(targetX * scaleX - crosshairSize, targetY * scaleY);
+            ctx.lineTo(targetX * scaleX + crosshairSize, targetY * scaleY);
+            ctx.stroke();
+
+            // Vertical line
+            ctx.beginPath();
+            ctx.moveTo(targetX * scaleX, targetY * scaleY - crosshairSize);
+            ctx.lineTo(targetX * scaleX, targetY * scaleY + crosshairSize);
+            ctx.stroke();
         }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            adjustScaling(); // Adjust scaling on page load
+            window.addEventListener('resize', adjustScaling); // Adjust scaling on window resize
+        });
 
         let commandInterval;
         let isLongPress = false;
@@ -533,6 +583,7 @@
                                         targetLockedStartTime = now; // Start the lock timer
                                     } else if (now - targetLockedStartTime >= 700) { // Target locked for 1 second
                                         if (autoFireToggle && !autoFireCooldown) {
+                                            sendCommand('FIRE'); // Fire command
                                             sendCommand('FIRE'); // Fire command
                                             sendCommand('FIRE'); // Fire command
                                             autoFireCooldown = true; // Enable cooldown
