@@ -152,7 +152,25 @@
         </div>
         <div class="preferences-buttons">
             <button class="pref-button" onclick="togglePreferences()">⚙</button>
-            <button class="pref-button" id="autoTrackToggle" onclick="toggleAutoTrack()">Auto Track</button>
+            <button class="pref-button" id="autoTrackToggle" onclick="toggleAutoTrack()">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="32" height="32" fill="none" stroke="currentColor" stroke-width="2">
+                    <!-- Outer reticle -->
+                    <circle cx="32" cy="32" r="28" stroke="currentColor" fill="none"/>
+                    <!-- Crosshairs -->
+                    <line x1="32" y1="4" x2="32" y2="12" />
+                    <line x1="32" y1="52" x2="32" y2="60" />
+                    <line x1="4" y1="32" x2="12" y2="32" />
+                    <line x1="52" y1="32" x2="60" y2="32" />
+                    
+                    <!-- Face outline -->
+                    <circle cx="32" cy="32" r="16" stroke="currentColor" fill="none" />
+                    <!-- Eyes -->
+                    <circle cx="26" cy="28" r="2" fill="currentColor"/>
+                    <circle cx="38" cy="28" r="2" fill="currentColor"/>
+                    <!-- Mouth -->
+                    <path d="M26 40 Q32 46, 38 40" stroke="currentColor" fill="none" stroke-linecap="round"/>
+                  </svg>
+            </button>
             <button class="pref-button" id="autoFireToggle" onclick="toggleAutoFire()">Auto Fire</button>
         </div>
         <button class="fire" onclick="sendCommand('FIRE')">FIRE</button>
