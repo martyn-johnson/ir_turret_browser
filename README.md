@@ -52,20 +52,32 @@ Pi Camera → Flask MJPEG stream (/video_feed)
 
 ---
 
-## ⚙️ Setup (Raspberry Pi)
+## ⚙️ Software Requirements
+
+- Raspberry Pi Imager (https://www.raspberrypi.com/software/)
+- Arduino IDE (https://www.arduino.cc/en/software/) or Hack Pack Create Agent (https://ide.crunchlabs.com/editor/8718988640487)
 
 ### Arduino Code
 
-Go to https://ide.crunchlabs.com/editor/8718988640487 or get the Arduino IDE (https://www.arduino.cc/en/software/) and we need to add some code to the sketch.
+Go to https://ide.crunchlabs.com/editor/8718988640487 or get the Arduino IDE (https://www.arduino.cc/en/software/) and we need to modify and add some code to the sketch.
 
-I reduced the Yaw values to improve precision:
+Here are the settings I used for movement:
 
 ```bash
-int yawMoveSpeed = 40;    // Reduce speed (from 90 to 40)
-int yawPrecision = 80;    // Reduce duration (from 150 to 80)
+int pitchMoveSpeed = 3; //this variable is the angle added to the pitch servo to control how quickly the PITCH servo moves - try values between 3 and 10
+int yawMoveSpeed = 90; //this variable is the speed controller for the continuous movement of the YAW servo motor. It is added or subtracted from the yawStopSpeed, so 0 would mean full speed rotation in one direction, and 180 means full rotation in the other. Try values between 10 and 90;
+int yawStopSpeed = 90; //value to stop the yaw motor - keep this at 90
+int rollMoveSpeed = 90; //this variable is the speed controller for the continuous movement of the ROLL servo motor. It is added or subtracted from the rollStopSpeed, so 0 would mean full speed rotation in one direction, and 180 means full rotation in the other. Keep this at 90 for best performance / highest torque from the roll motor when firing.
+int rollStopSpeed = 90; //value to stop the roll motor - keep this at 90
+
+int yawPrecision = 30; // this variable represents the time in milliseconds that the YAW motor will remain at it's set movement speed. Try values between 50 and 500 to start (500 milliseconds = 1/2 second)
+int rollPrecision = 158; // this variable represents the time in milliseconds that the ROLL motor with remain at it's set movement speed. If this ROLL motor is spinning more or less than 1/6th of a rotation when firing a single dart (one call of the fire(); command) you can try adjusting this value down or up slightly, but it should remain around the stock value (160ish) for best results.
+
+int pitchMax = 130; // this sets the maximum angle of the pitch servo to prevent it from crashing, it should remain below 180, and be greater than the pitchMin
+int pitchMin = 50; // this sets the minimum angle of the pitch servo to prevent it from crashing, it should remain above 0, and be less than the pitchMax
 ```
 
-Add this inside your existing loop() and outside the if (IrReceiver.decode()) block, so both IR and serial input can be handled independently.
+Then, add this inside your existing loop() and outside the if (IrReceiver.decode()) block, so both IR and serial input can be handled independently.
 
 ```bash
 // Check for serial input from Raspberry Pi
@@ -97,10 +109,15 @@ if (Serial.available()) {
 ```
 
 ### 1. Flash Raspberry Pi OS Lite (64-bit)
-- Enable SSH, set hostname to `ir-turret.local`
-- Pre-configure Wi-Fi and credentials
+- Use **Raspberry Pi Imager**:
+  - Choose: Raspberry Pi OS Lite (64-bit)
+  - Enable: SSH, set hostname to `ir-turret.local`
+  - Set username to `pi` and create a password
+  - Configure Wi-Fi to your network settings
+
 
 ### 2. SSH Into the Pi
+Power up the Raspberry Pi (this might take some time on first boot), then open a terminal on your machine and connect to the Pi vis SSH.
 
 ```bash
 ssh pi@ir-turret.local
@@ -137,6 +154,46 @@ Then visit:
 
 ```
 http://ir-turret.local:5000/
+```
+
+
+### (Optional) Auto-Start Flask App on Boot
+
+rather than starting the app manually, you can start the app as a service on every boot.
+
+```bash
+sudo nano /etc/systemd/system/turret.service
+```
+
+Paste the following:
+
+```ini
+[Unit]
+Description=IR Turret Flask App
+After=network.target
+
+[Service]
+User=pi
+WorkingDirectory=/home/pi/ir_turret
+ExecStart=/usr/bin/python3 /home/pi/ir_turret_browser/app.py
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Then enable and start the service:
+
+```bash
+sudo systemctl daemon-reexec
+sudo systemctl enable turret.service
+sudo systemctl start turret.service
+```
+
+To restart the service after editing Python files:
+
+```bash
+sudo systemctl restart turret.service
 ```
 
 ---
