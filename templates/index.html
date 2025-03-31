@@ -531,7 +531,7 @@
                     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
                     if (predictions.length > 0) {
-                        console.log("Faces detected:", predictions);
+                        //console.log("Faces detected:", predictions);
 
                         // Get the bounding rectangle of the video feed on the screen
                         const rect = videoFeed.getBoundingClientRect();
@@ -616,7 +616,7 @@
                         });
                     }
                 } catch (error) {
-                    console.error("Error during face detection:", error);
+                    //console.error("Error during face detection:", error);
                 }
 
                 await new Promise(resolve => setTimeout(resolve, 100)); // Limit detection rate
