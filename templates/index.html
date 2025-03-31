@@ -513,8 +513,9 @@
                                 ) {
                                     if (!targetLockedStartTime) {
                                         targetLockedStartTime = now; // Start the lock timer
-                                    } else if (now - targetLockedStartTime >= 1000) { // Target locked for 1 second
+                                    } else if (now - targetLockedStartTime >= 700) { // Target locked for 1 second
                                         if (autoFireToggle && !autoFireCooldown) {
+                                            sendCommand('FIRE'); // Fire command
                                             sendCommand('FIRE'); // Fire command
                                             autoFireCooldown = true; // Enable cooldown
                                             setTimeout(() => {
