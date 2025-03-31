@@ -150,8 +150,11 @@
             <button class="left" onclick="sendCommand('LEFT')">←</button>
             <button class="right" onclick="sendCommand('RIGHT')">→</button>
         </div>
-
-        <button class="pref-button" onclick="togglePreferences()">⚙</button>
+        <div class="preferences-buttons">
+            <button class="pref-button" onclick="togglePreferences()">⚙</button>
+            <button class="pref-button" id="autoTrackToggle" onclick="toggleAutoTrack()">Auto Track</button>
+            <button class="pref-button" id="autoFireToggle" onclick="toggleAutoFire()">Auto Fire</button>
+        </div>
         <button class="fire" onclick="sendCommand('FIRE')">FIRE</button>
     </div>
 
@@ -588,6 +591,25 @@
             canvas.height = 720; // Match video feed resolution
             drawCrosshairs(); // Draw initial crosshairs
         });
+
+        let autoTrackEnabled = false;
+        let autoFireEnabled = false;
+
+        function toggleAutoTrack() {
+            autoTrackEnabled = !autoTrackEnabled;
+            const autoTrackButton = document.getElementById('autoTrackToggle');
+            autoTrackButton.style.background = autoTrackEnabled ? 'lime' : 'rgba(255,255,255,0.1)';
+            document.getElementById('trackToggle').checked = autoTrackEnabled; // Sync with preferences checkbox
+            applySettings(); // Apply the updated setting
+        }
+
+        function toggleAutoFire() {
+            autoFireEnabled = !autoFireEnabled;
+            const autoFireButton = document.getElementById('autoFireToggle');
+            autoFireButton.style.background = autoFireEnabled ? 'lime' : 'rgba(255,255,255,0.1)';
+            document.getElementById('autoFireToggle').checked = autoFireEnabled; // Sync with preferences checkbox
+            applySettings(); // Apply the updated setting
+        }
     </script>
 </body>
 </html>
