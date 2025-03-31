@@ -423,6 +423,8 @@
         let targetY = 360; // Default target Y (center of 720px height)
         const crosshairSize = 20; // Size of the crosshairs
         const deadZone = 30; // Dead zone radius in pixels
+        let autoFireCooldown = false; // Flag to prevent firing for 5 seconds after firing
+        let targetLockedStartTime = null; // Track when the target was locked
 
         async function loadModel() {
             model = await blazeface.load();
@@ -497,6 +499,8 @@
 
                             // If "Track Faces" is enabled, send commands to move the turret
                             const trackToggle = document.getElementById('trackToggle').checked;
+                            const autoFireToggle = document.getElementById('autoFireToggle').checked;
+
                             if (trackToggle) {
                                 const now = Date.now();
 
@@ -507,8 +511,21 @@
                                     targetY >= adjustedY1 &&
                                     targetY <= adjustedY2
                                 ) {
+                                    if (!targetLockedStartTime) {
+                                        targetLockedStartTime = now; // Start the lock timer
+                                    } else if (now - targetLockedStartTime >= 1000) { // Target locked for 1 second
+                                        if (autoFireToggle && !autoFireCooldown) {
+                                            sendCommand('FIRE'); // Fire command
+                                            autoFireCooldown = true; // Enable cooldown
+                                            setTimeout(() => {
+                                                autoFireCooldown = false; // Reset cooldown after 5 seconds
+                                            }, 5000);
+                                        }
+                                    }
                                     console.log("Target is within the bounding box. No movement required.");
                                     return; // Stop movement
+                                } else {
+                                    targetLockedStartTime = null; // Reset lock timer if target moves out
                                 }
 
                                 // Add a buffer to slow down movement and rate-limit commands

@@ -38,8 +38,6 @@ turret = TurretSerial('/dev/ttyUSB0')  # Adjust if needed
 
 # Global variables
 target_x, target_y = 320, 180
-auto_track = False
-auto_fire = False
 latest_command = None
 lock = threading.Lock()
 last_command_time = 0
@@ -106,11 +104,7 @@ def send_command(cmd):
 
 @app.route('/settings', methods=['POST'])
 def update_settings():
-    global auto_track, auto_fire
     data = request.get_json()
-    auto_track = data.get('track', False)
-    auto_fire = data.get('auto_fire', False)
-    print(f"[SETTINGS] Track: {auto_track}, Auto Fire: {auto_fire}")
 
     # Apply camera settings
     try:
