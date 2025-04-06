@@ -2,6 +2,7 @@
 ## Designed for Crunchlabs Hack Pack IR Turret (by Mark Rober) 
 ### Using Raspberry Pi Zero 2 W + Camera Module 3 
 **Repo:** [`ir_turret_browser`](https://github.com/martyn-johnson/ir_turret_browser)
+**See it in action:** [`Mark Rober’s IR Turret AI Face Tracking`](https://youtu.be/RiZ3YAne5aI?si=kj3cuOjsDZClt6xQ)
 
 ---
 
@@ -174,7 +175,7 @@ After=network.target
 
 [Service]
 User=pi
-WorkingDirectory=/home/pi/ir_turret
+WorkingDirectory=/home/pi/ir_turret_browser
 ExecStart=/usr/bin/python3 /home/pi/ir_turret_browser/app.py
 Restart=always
 
@@ -213,6 +214,8 @@ sudo systemctl restart turret.service
 ---
 
 ## 🧠 AI Offloading Benefits
+
+Originally this project [`ir_turret`](https://github.com/martyn-johnson/ir_turret) was built with the Pi controlling the Face detection and tracking with OpenCV, however the Pi was getting very hot.
 
 This version shifts all face tracking and computer vision to the browser using TensorFlow.js — enabling smoother performance, less heat on the Pi, and greater flexibility (modern phones/tablets can handle real-time tracking easily).
 
