@@ -521,6 +521,7 @@
 
             let lastCommandTime = 0; // Track the last time a command was sent
             const commandCooldown = 200; // Minimum time (ms) between commands
+            const confidenceThreshold = 0.9; // Confidence threshold for face detection
 
             while (true) {
                 try {
@@ -531,6 +532,7 @@
                     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
                     if (predictions.length > 0) {
+                        const filteredPredictions = predictions.filter(prediction => prediction.probability[0] >= confidenceThreshold);
                         //console.log("Faces detected:", predictions);
 
                         // Get the bounding rectangle of the video feed on the screen
@@ -540,7 +542,7 @@
                         const scaleX = videoWidth / rect.width;
                         const scaleY = videoHeight / rect.height;
 
-                        predictions.forEach(prediction => {
+                        filteredPredictions.forEach(prediction => {
                             const [x1, y1] = prediction.topLeft;
                             const [x2, y2] = prediction.bottomRight;
 
